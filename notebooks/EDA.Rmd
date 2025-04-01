@@ -1,0 +1,27 @@
+---
+title: "Data Preprocessing"
+author: "Josh Schechter"
+date: "2025-04-01"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Import student dataset
+```{r}
+students <- read.csv("../data/Students_Grading_Dataset.csv")
+```
+
+# Remove rows with missing values
+```{r}
+students <- students[complete.cases(students), ]
+```
+
+# Display the first few rows of the dataset
+```{r}
+head(students, 5)
+nrow(students)
+```
+
