@@ -9,6 +9,13 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+```{r}
+library(dplyr)
+library(readr)
+library(ggplot2)
+library(tidyr)
+```
+
 # Import student dataset
 ```{r}
 students <- read.csv("../data/Students_Grading_Dataset.csv")
@@ -17,11 +24,186 @@ students <- read.csv("../data/Students_Grading_Dataset.csv")
 # Remove rows with missing values
 ```{r}
 students <- students[complete.cases(students), ]
+students <- na.omit(students)
+students <- students[students$Parent_Education_Level != "", ]
+```
+
+```{r}
+students <- students %>%
+  rename(
+    Stress_Level = `Stress_Level..1.10.`,
+    Attendance = `Attendance....`
+  )
+```
+
+```{r}
+colnames(students)
+nrow(students)
 ```
 
 # Display the first few rows of the dataset
 ```{r}
 head(students, 5)
-nrow(students)
 ```
+# Features of interest:
+## Student_ID, Grade, Study_Hours_per_Week, Family_Income_Level, Sleep_Hours_per_Night,
+## Stress_Level, Attendance, Internet_Access_at_Home, Parent_Education_Level, Extracurricular_Activities
+## Gender
+
+# Summary statistics
+```{r}
+summary(select(students, Student_ID, Total_Score, Grade, Study_Hours_per_Week, Sleep_Hours_per_Night,
+               Family_Income_Level, Study_Hours_per_Week, Stress_Level, Attendance, Internet_Access_at_Home,
+               Parent_Education_Level, Extracurricular_Activities))
+```
+
+
+
+# Data Visualization
+
+## Numerical
+```{r}
+# Grade Distribution
+students %>%
+  count(Grade) %>%
+  mutate(Proportion = n / sum(n)) %>%
+  ggplot(aes(x = Grade, y = Proportion)) +
+  geom_bar(stat = "identity", fill = 'lightblue') +
+  labs(title = "Grade Distribution", y = "Proportion", x = "Grade") +
+  ylim(0, 0.5)
+
+# Final Score Distribution
+ggplot(students, aes(x = Final_Score)) +
+  geom_histogram(fill = "lightblue", bins=20) +
+  labs(title = "Final Score Distribution",
+       x = "Final Score")
+
+# Final Score Boxplot
+ggplot(students, aes(y = Final_Score)) +
+  geom_boxplot(fill = "lightblue") +
+  labs(title = "Final Score by Grade")
+
+# Attendance by Grade
+ggplot(students, aes(x = Grade, y = Attendance)) +
+  geom_boxplot(fill = "lightblue") +
+  labs(title = "Attendance by Grade")
+
+# Sleep Hours by Grade
+ggplot(students, aes(x = Grade, y = Sleep_Hours_per_Night)) +
+  geom_boxplot(fill = "lightblue") +
+  labs(title = "Sleep Hours by Grade")
+
+# Stress by Grade
+ggplot(students, aes(x = Grade, y = Stress_Level)) +
+  geom_boxplot(fill = "lightblue") +
+  labs(title = "Stress Level by Grade")
+
+# Study Time by Grade
+ggplot(students, aes(x = Grade, y = Study_Hours_per_Week)) +
+  geom_boxplot(fill = "lightblue") +
+  labs(title = "Study Hours per Week by Grade")
+
+
+```
+
+## Categorical
+```{r}
+# Family Income by Grade
+students %>%
+  count(Family_Income_Level, Grade) %>%
+  group_by(Family_Income_Level) %>%
+  mutate(Proportion = n / sum(n)) %>%
+  ggplot(aes(x = Family_Income_Level, y = Proportion, fill = Grade)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Normalized Grade Distribution by Family Income Level",
+       x = "Family Income Level", y = "Proportion") +
+  ylim(0,0.5)
+
+# Parent Education Levels by Grade
+students %>%
+  count(Parent_Education_Level, Grade) %>%
+  group_by(Parent_Education_Level) %>%
+  mutate(Proportion = n / sum(n)) %>%
+  ggplot(aes(x = Parent_Education_Level, y = Proportion, fill = Grade)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Normalized Grade Distribution by Parent Education Level",
+       x = "Parent Education Level", y = "Proportion") +
+  ylim(0,0.5)
+
+# Internet Access by Grade
+students %>%
+  count(Internet_Access_at_Home, Grade) %>%
+  group_by(Internet_Access_at_Home) %>%
+  mutate(Proportion = n / sum(n)) %>%
+  ggplot(aes(x = Internet_Access_at_Home, y = Proportion, fill = Grade)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Normalized Grade Distribution by Internet Access at Home",
+       x = "Internet Access at Home", y = "Proportion") +
+  ylim(0,0.5)
+
+# Extracurricular by Grade
+students %>%
+  count(Extracurricular_Activities, Grade) %>%
+  group_by(Extracurricular_Activities) %>%
+  mutate(Proportion = n / sum(n)) %>%
+  ggplot(aes(x = Extracurricular_Activities, y = Proportion, fill = Grade)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Normalized Grade Distribution by Extracurricular Participation",
+       x = "Extracurricular Activities", y = "Proportion") +
+  ylim(0,0.5)
+```
+
+
+
+Table of proportion of students by grade for each family income level
+```{r}
+# Proportion table
+grade_income_table <- students %>%
+  count(Family_Income_Level, Grade) %>%
+  group_by(Family_Income_Level) %>%
+  mutate(Proportion = n / sum(n)) %>%
+  select(-n) %>%
+  pivot_wider(names_from = Grade, values_from = Proportion, values_fill = 0)
+
+grade_parentedu_table <- students %>%
+  count(Parent_Education_Level, Grade) %>%
+  group_by(Parent_Education_Level) %>%
+  mutate(Proportion = n / sum(n)) %>%
+  select(-n) %>%
+  pivot_wider(names_from = Grade, values_from = Proportion, values_fill = 0)
+
+grade_internet_table <- students %>%
+  count(Internet_Access_at_Home, Grade) %>%
+  group_by(Internet_Access_at_Home) %>%
+  mutate(Proportion = n / sum(n)) %>%
+  select(-n) %>%
+  pivot_wider(names_from = Grade, values_from = Proportion, values_fill = 0)
+
+grade_extracurricular_table <- students %>%
+  count(Extracurricular_Activities, Grade) %>%
+  group_by(Extracurricular_Activities) %>%
+  mutate(Proportion = n / sum(n)) %>%
+  select(-n) %>%
+  pivot_wider(names_from = Grade, values_from = Proportion, values_fill = 0)
+
+grade_income_table
+grade_parentedu_table
+grade_internet_table
+grade_extracurricular_table
+```
+
+
+```{r}
+qqnorm(students$Total_Score, main="Normal Q-Q Plot of Total Score")
+qqline(students$Total_Score, col = "red")
+```
+
+
+## EDA Results:
+
+- Class attendance seems to be the best indicator for success
+- Students with family/home life backgrounds don't seem to have a significant difference in grade outcomes.
+
+
+
 
