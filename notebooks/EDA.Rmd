@@ -37,6 +37,19 @@ students <- students %>%
 ```
 
 ```{r}
+students$Pass_Fail <- ifelse(students$Grade %in% c("A", "B", "C"), "Pass", "Fail")
+
+students$Pass_Fail <- factor(students$Pass_Fail, levels = c("Fail", "Pass"))
+
+#table(students$Pass_Fail)
+```
+
+```{r}
+# output to csv
+write.csv(students, "../data/Students_Grading_Dataset_Cleaned.csv", row.names = FALSE)
+```
+
+```{r}
 colnames(students)
 nrow(students)
 ```
@@ -72,11 +85,11 @@ students %>%
   labs(title = "Grade Distribution", y = "Proportion", x = "Grade") +
   ylim(0, 0.5)
 
-# Final Score Distribution
-ggplot(students, aes(x = Final_Score)) +
+# Total Score Distribution
+ggplot(students, aes(x = Total_Score)) +
   geom_histogram(fill = "lightblue", bins=20) +
-  labs(title = "Final Score Distribution",
-       x = "Final Score")
+  labs(title = "Total Score Distribution",
+       x = "Total Score")
 
 # Final Score Boxplot
 ggplot(students, aes(y = Final_Score)) +
