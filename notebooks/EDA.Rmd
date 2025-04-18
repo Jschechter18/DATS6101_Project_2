@@ -218,5 +218,11 @@ qqline(students$Total_Score, col = "red")
 - Students with family/home life backgrounds don't seem to have a significant difference in grade outcomes.
 
 
+```{r}
+roc(students$Pass_Fail, students$Total_Score)
+```
+
+```{r}
 
 
+```

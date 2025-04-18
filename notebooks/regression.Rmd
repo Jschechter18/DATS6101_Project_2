@@ -19,6 +19,8 @@ library(readr)
 library(ggplot2)
 library(tidyr)
 library(caret)
+library(pROC)
+library(MASS)
 ```
 
 ```{r}
@@ -37,103 +39,101 @@ colnames(students)
 6. Report findings.
 
 ```{r}
-
-
 cor(students[, c("Total_Score", "Study_Hours_per_Week", 
                          "Sleep_Hours_per_Night", 
                          "Attendance")], method="pearson")
 ```
-```{r}
-cor(students, method="pearson")
-```
-
 Target variables:
 1. Pass_Fail (logistic regression)
 2. Total_Score (linear regression?)
 
 ```{r}
-
-```
-
-```{r}
-# Create individual regression models with features that seem to be correlated to the target variable
-model_1 <- glm(Pass_Fail ~ Study_Hours_per_Week, 
+model <- glm(Pass_Fail ~ Study_Hours_per_Week + 
+                   Internet_Access_at_Home + 
+                   Parent_Education_Level + 
+                   Stress_Level + 
+                   Extracurricular_Activities + 
+                   Family_Income_Level + 
+                   Attendance,
                    data = students, family = binomial)
-
-model_2 <- glm(Pass_Fail ~ Internet_Access_at_Home, 
-                   data = students, family = binomial)
-
-model_3 <- glm(Pass_Fail ~ Parent_Education_Level, 
-                   data = students, family = binomial)
-
-model_4 <- glm(Pass_Fail ~ Stress_Level , 
-                   data = students, family = binomial)
-
-model_5 <- glm(Pass_Fail ~ Extracurricular_Activities, 
-                   data = students, family = binomial)
-
-model_6 <- glm(Pass_Fail ~ Family_Income_Level, 
-                   data = students, family = binomial)
-
-model_7 <- glm(Pass_Fail ~ Study_Hours_per_Week * Family_Income_Level * Parent_Education_Level, 
-                   data = students, family = binomial)
-```
-
-```{r}
-head(predict(model_1, type = "response"))
-head(predict(model_2, type = "response"))
-head(predict(model_3, type = "response"))
-head(predict(model_4, type = "response"))
-head(predict(model_5, type = "response"))
-head(predict(model_6, type = "response"))
-
-head(predict(model_7, type = "response"))
-```
-```{r}
-pred_probs_2 <- predict(model_2, type = "response")
-pred_classes_2 <- ifelse(pred_probs_2 > 0.5, "Pass", "Fail")
-pred_classes_2 <- factor(pred_classes_2, levels = c("Fail", "Pass"))
-
-conf_mat_2 <- confusionMatrix(pred_classes_2, students$Pass_Fail, positive = "Pass")
-cat("Model 2 - Internet Access\n")
-cat("Precision:", round(conf_mat_2$byClass["Precision"], 3), "\n")
-cat("Recall:", round(conf_mat_2$byClass["Recall"], 3), "\n\n")
-```
-
-```{r}
-summary(model_1)
-summary(model_2)
 ```
 
 
 ```{r}
-model_lm <- lm(Total_Score ~ Study_Hours_per_Week + 
-                        Sleep_Hours_per_Night + 
-                        Attendance + 
-                        Family_Income_Level + 
-                        Parent_Education_Level + 
-                        Extracurricular_Activities, 
-                  data = students)
+# Stepwise selection
+stepwise_model <- stepAIC(model, direction = "both")
+
+summary(stepwise_model)
+```
+Feature selection tells us that attendance is the best model
+
+```{r}
+attendance_model <- glm(Pass_Fail ~ Attendance, 
+                   data = students, family = binomial)
 ```
 
 
 ```{r}
-summary(model_lm)
+summary(attendance_model)
+```
+
+```{r}
+students$predictions <- predict(attendance_model, type = "response")
+
+students$Pass_Fail <- factor(students$Pass_Fail, levels = c("Fail", "Pass"))
+students$predicted_class <- ifelse(students$predictions > 0.6, "Pass", "Fail") # best one thus far
+students$predicted_class <- factor(students$predicted_class, levels = c("Fail", "Pass"))
+confusionMatrix(students$predicted_class, students$Pass_Fail, positive = "Pass")
+```
+
+```{r}
+roc(students$Pass_Fail, 
+    predict(attendance_model, type = "response"), 
+    plot = TRUE, 
+    print.auc = TRUE, 
+    col = "blue", 
+    lwd = 2)
+```
+*Attendance AUC* -> 0.798
+
+
+
+## Can we improve on attendance?
+
+# Feature engineering
+```{r}
+students$Engagement_Ratio <- (students$Participation_Score + students$Attendance + students$Study_Hours_per_Week) / 3
+```
+
+```{r}
+# BEST MODEL
+engagement_model <- glm(Pass_Fail ~ Engagement_Ratio,
+                   data = students, family = binomial)
 ```
 
 
-Note that no coefficients besides the intercept are statistically significant.
-
-Target variable:
- 1. Total score
- 2. Grade
- 3. Pass/Fail
- 4. High pass, low pass, fail
- 5. Honors, not honors
+```{r}
+summary(engagement_model) # engagement is most significant right now
+```
 
 
+```{r}
+students$predictions <- predict(engagement_model, type = "response")
 
+students$Pass_Fail <- factor(students$Pass_Fail, levels = c("Fail", "Pass"))
+students$predicted_class <- ifelse(students$predictions > 0.6, "Pass", "Fail") # best one thus far
+students$predicted_class <- factor(students$predicted_class, levels = c("Fail", "Pass"))
+confusionMatrix(students$predicted_class, students$Pass_Fail, positive = "Pass")
+```
 
+```{R}
+roc(students$Pass_Fail,
+    students$predictions,
+    plot = TRUE, 
+    print.auc = TRUE, 
+    col = "blue", 
+    lwd = 2)
+```
 
-
+Auc went down upon feature engineering. However, the recall went up
 
