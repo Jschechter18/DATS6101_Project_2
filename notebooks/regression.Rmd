@@ -132,8 +132,97 @@ Target variable:
  5. Honors, not honors
 
 
+```{r} 
+colnames(students) 
+```
 
+# FEATURE ENGINEERING
+# Finding the best threshold value for the model
+```{r}
+roc_obj <- roc(students$Pass_Fail, students$predictions)
+coords(roc_obj, "best", ret = "threshold")  
+```
 
+# Logistic regression Model with INVOLVEMENT_RATIO
+```{r}
+library(pROC)
+students$Involvement_Ratio <- (students$Participation_Score + students$Attendance + students$Study_Hours_per_Week) / 3
+
+# Model
+Involvement_model <- glm(Pass_Fail ~ Involvement_Ratio, data = students, family = "binomial")
+students$pred_Involvement <- predict(Involvement_model, type = "response")
+students$pred_class_Involvement <- factor(ifelse(students$pred_Involvement > 0.66, "Pass", "Fail"), levels = c("Fail", "Pass"))
+
+# Evaluation
+confusionMatrix(students$pred_class_Involvement, students$Pass_Fail, positive = "Pass")
+
+# ROC Curve
+roc(students$Pass_Fail,
+    students$pred_Involvement,
+    plot = TRUE,
+    print.auc = TRUE)
+
+```
+
+# Logistic regression Model with STUDY HOURS PER WEEK
+```{r}
+students$Pass_Fail <- factor(students$Pass_Fail, levels = c("Fail", "Pass"))
+
+study_hours_model <- glm(Pass_Fail ~ Study_Hours_per_Week,
+                         data = students, family = binomial)
+
+students$predictions_study_hours <- predict(study_hours_model, type = "response")
+students$predicted_class_study_hours <- ifelse(students$predictions_study_hours > 0.66, "Pass", "Fail")
+students$predicted_class_study_hours <- factor(students$predicted_class_study_hours, levels = c("Fail", "Pass"))
+
+# confusion matrix
+confusionMatrix(students$predicted_class_study_hours, students$Pass_Fail, positive = "Pass")
+
+# ROC Curve 
+roc(students$Pass_Fail,
+    students$predictions_study_hours,
+    plot = TRUE,
+    print.auc = TRUE,
+    col = "red",
+    lwd = 2)
+
+```
+
+# Logistic regression Model with STRESS_MODEL
+```{r}
+stress_model <- glm(Pass_Fail ~ Stress_Level, data = students, family = "binomial")
+students$pred_stress <- predict(stress_model, type = "response")
+students$pred_class_stress <- factor(ifelse(students$pred_stress > 0.66, "Pass", "Fail"), levels = c("Fail", "Pass"))
+
+confusionMatrix(students$pred_class_stress, students$Pass_Fail, positive = "Pass")
+
+roc(students$Pass_Fail,
+    students$pred_stress,
+    plot = TRUE,
+    print.auc = TRUE,
+    col = "red")
+```
+
+# Logistic regression Model with ATTENDANCE_MODEL
+```{r}
+attendance_model <- glm(Pass_Fail ~ Attendance, data = students, family = "binomial")
+
+# Predictions
+students$pred_attendance <- predict(attendance_model, type = "response")
+students$pred_class_attendance <- factor(ifelse(students$pred_attendance > 0.66, "Pass", "Fail"), levels = c("Fail", "Pass"))
+
+# Evaluation
+confusionMatrix(students$pred_class_attendance, students$Pass_Fail, positive = "Pass")
+
+# ROC Curve
+roc(students$Pass_Fail, students$pred_attendance,
+    plot = TRUE,
+    print.auc = TRUE,
+    col = "purple",
+    lwd = 2,
+    main = "ROC Curve - Attendance Model")
+
+```
 
 
 
