@@ -164,6 +164,21 @@ students %>%
   labs(title = "Normalized Grade Distribution by Extracurricular Participation",
        x = "Extracurricular Activities", y = "Proportion") +
   ylim(0,0.5)
+
+# Gender by Grade
+students %>%
+  count(Gender, Grade) %>%
+  group_by(Gender) %>%
+  mutate(Proportion = n / sum(n)) %>%
+  ggplot(aes(x = Gender, y = Proportion, fill = Grade)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(
+    title = "Normalized Grade Distribution by Gender",
+    x = "Gender",
+    y = "Proportion"
+  ) +
+  ylim(0, 0.6) 
+
 ```
 
 
