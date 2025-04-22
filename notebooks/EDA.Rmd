@@ -37,9 +37,9 @@ students <- students %>%
 ```
 
 ```{r}
-students$Pass_Fail <- ifelse(students$Grade %in% c("A", "B", "C"), "Pass", "Fail")
+students$Pass_Fail <- ifelse(students$Grade %in% c("A", "B", "C"), 1, 0)
 
-students$Pass_Fail <- factor(students$Pass_Fail, levels = c("Fail", "Pass"))
+students$Pass_Fail <- factor(students$Pass_Fail, levels = c(1, 0))
 
 #table(students$Pass_Fail)
 ```
@@ -218,5 +218,47 @@ qqline(students$Total_Score, col = "red")
 - Students with family/home life backgrounds don't seem to have a significant difference in grade outcomes.
 
 
+```{r}
+roc(students$Pass_Fail, students$Total_Score)
+```
 
 
+## Most important figures are below
+```{r}
+# Boxplot: Final Grade by Parental Education
+ggplot(students, aes(x = Parent_Education_Level, y = Total_Score)) +
+  geom_boxplot() +
+  labs(title = "Total Score vs Parental Education Level", x = "Parental Education Level", y = "Total Score") +
+  theme_minimal()
+
+# Boxplot: Final Grade by Family Income
+ggplot(students, aes(x = Family_Income_Level, y = Total_Score)) +
+  geom_boxplot() +
+  labs(title = "Total Score vs Family Income", x = "Family Income", y = "Total Score") +
+  theme_minimal()
+
+# Boxplot: Final Grade by Internet Access
+ggplot(students, aes(x = Internet_Access_at_Home, y = Total_Score)) +
+  geom_boxplot() +
+  labs(title = "Total Score vs Internet Access", x = "Internet Access (Yes/No)", y = "Total Score") +
+  theme_minimal()
+
+# Boxplot: Final Grade by Extracurricular Activities
+ggplot(students, aes(x = Extracurricular_Activities, y = Total_Score)) +
+  geom_boxplot() +
+  labs(title = "Total Score vs Extracurricular Participation", x = "Extracurricular Activities (Yes/No)", y = "Total Score") +
+  theme_minimal()
+
+ggplot(students, aes(x = factor(Stress_Level), y = Total_Score)) +
+  geom_boxplot() +
+  labs(title = "Final Grade vs Stress Level",
+       x = "Stress Level (1 = low stress, 10 = high stress)",
+       y = "Total Score") +
+  theme_minimal()
+
+# Scatterplot: Final Grade vs Study Time
+ggplot(students, aes(x = Study_Hours_per_Week, y = Total_Score)) +
+  geom_point(alpha = 0.5) +
+  labs(title = "Total Score vs Study Time", x = "Study Time (hours)", y = "Total Score") +
+  theme_minimal()
+```
