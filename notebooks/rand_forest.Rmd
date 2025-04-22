@@ -1,0 +1,40 @@
+---
+title: "Tree Model"
+author: "Josh Schechter"
+date: "2025-04-22"
+output: html_document
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(dplyr)
+library(readr)
+library(ggplot2)
+library(tidyr)
+library(caret)
+library(rpart)
+```
+
+```{r}
+students <- read.csv("../data/Students_Grading_Dataset_Cleaned.csv")
+```
+
+```{r}
+set.seed(1)
+tree_model <- rpart(Pass_Fail ~ Attendance + Family_Income_Level, data=students, method="class", control = list(maxdepth = 4) )
+```
+
+```{r}
+summary(tree_model) # detailed summary of splits
+# plot tree 
+plot(tree_model, uniform=TRUE, main="Classification Tree for Attendance")
+text(tree_model, use.n=TRUE, all=TRUE, cex=.8)
+```
