@@ -39,101 +39,209 @@ colnames(students)
 6. Report findings.
 
 ```{r}
-cor(students[, c("Total_Score", "Study_Hours_per_Week", 
+cor_mat <- cor(students[, c("Total_Score", "Study_Hours_per_Week", 
                          "Sleep_Hours_per_Night", 
-                         "Attendance")], method="pearson")
+                         "Attendance", "Participation_Score",
+                         'Pass_Fail')])
+
+
+corrplot::corrplot(cor_mat,
+                   method="number",
+                   col="blue",
+                   type="lower",
+                   cl.pos='n',
+                   diag=FALSE)
 ```
-Target variables:
+## Correlation matrix:
+Only attendance seems to have a decent correlation with pass fail.
+
+
+## Target variables:
 1. Pass_Fail (logistic regression)
-2. Total_Score (linear regression?)
+2. Total_Score (linear regression?
+
+# Linear regressions total grade
+```{r}
+students$Total_Score <- as.numeric(students$Total_Score)
+students$Study_Hours_per_Week <- as.numeric(students$Study_Hours_per_Week)
+students$Sleep_Hours_per_Night <- as.numeric(students$Sleep_Hours_per_Night)
+students$Stress_Level <- as.numeric(students$Stress_Level)
+```
 
 ```{r}
-model <- glm(Pass_Fail ~ Study_Hours_per_Week + 
-                   Internet_Access_at_Home + 
-                   Parent_Education_Level + 
-                   Stress_Level + 
-                   Extracurricular_Activities + 
-                   Family_Income_Level + 
-                   Attendance,
-                   data = students, family = binomial)
+sleep_model <- lm(Total_Score ~ Sleep_Hours_per_Night, data = students)
+summary(sleep_model)
+
+# Residual plots for Sleep model
+par(mfrow = c(2,2))
+plot(sleep_model)
+
+# 2. Linear Regression: Stress Level vs Final Grade
+stress_model <- lm(Total_Score ~ Stress_Level, data = students)
+summary(stress_model)
+
+# Residual plots for Stress model
+par(mfrow = c(2,2))
+plot(stress_model)
+
+# 3. Linear Regression: Study Time vs Final Grade
+study_model <- lm(Total_Score ~ Study_Hours_per_Week, data = students)
+summary(study_model)
+
+# Residual plots for Study model
+par(mfrow = c(2,2))
+plot(study_model)
+
+# 4. Linear Regression: Attendance vs Final Grade
+attendance_model <- lm(Total_Score ~ Attendance, data = students)
+summary(attendance_model)
 ```
+## Linear Regression Coefficients
+Sleep:
+ - p = 0.62, so no statistically significant relationship with pass fail
+ - Multiple R-squared = 7.711e-05, so not a good predictor of pass fail
+ - coef: -0.08577
+ - intercept: 75.45
+Stress:
+ - Multiple R-squared = 0.0002296, so not a good predictor of pass fail
+ - coef: 0.07642
+ - p = 0.389, so no statistically significant relationship with pass fail
+ - intercept: 74.48
+Study:
+ - Multiple R-squared = -0.0005155, so not a good predictor of pass fail
+ - coef: -0.04493
+ - p = 0.197, so no statistically significant relationship with pass fail
+ - intercept: 75.69
+
+
+
+## Statistical tests on other factors
+```{r}
+parent_education_level_aov <- aov(Total_Score ~ Parent_Education_Level, data = students)
+summary(parent_education_level_aov)
+```
+H0: Total score mean is the same for all parent education levels.
+H1: TOtal score mean is not the same for all parent education levels.
+p > 0.05, so we cannot reject the null hypothesis
+
+```{r}
+internet_access_t_test <- t.test(Total_Score ~ Internet_Access_at_Home, data = students)
+internet_access_t_test
+```
+
+H0: Total score mean is the same with or without home internet access.
+H1: Total score mean is different for students with and without home internet access.
+p > 0.05, so we cannot reject the null hypothesis
+
+```{r}
+extracurricular_t_test <- t.test(Total_Score ~ Extracurricular_Activities, data = students)
+extracurricular_t_test
+```
+H0: The mean total score for students who participated in extracurricular activities and students who did is the same.
+H1: The mean total score for students who participated in extracurricular activities and students who did not is the same.
+p > 0.05, so we cannot reject the null hypothesis
+
+```{r}
+family_income_anova <- aov(Total_Score ~ Family_Income_Level, data = students)
+summary(family_income_anova)
+```
+H0: The total score for all family income levels is the same.
+H1: The total score for all family income levels is not the same.
+p > 0.05, so we cannot reject the null hypothesis
+
+
+
+
+
+## Logistic regression
+```{r}
+logit_model <- glm(Pass_Fail ~ Attendance + Family_Income_Level + Extracurricular_Activities + Internet_Access_at_Home,
+                   data = students,
+                   family = binomial)
+```
+
+## initial logit model
+Running a model with features: attendance, family income, extracurriculars, and internet access at home
 
 
 ```{r}
 # Stepwise selection
-stepwise_model <- stepAIC(model, direction = "both")
+stepwise_logit_model <- stepAIC(logit_model, direction = "both")
 
-summary(stepwise_model)
+summary(stepwise_logit_model)
 ```
-Feature selection tells us that attendance is the best model
+## Feature selection analysis
+Feature selection tells us that attendance is the best model predictor. Note, we should still check to see if there is a difference between the different groups of students and their total scores.
+
+Lowest AIC model is attendance only.
+
+stepwise gives us the model:
+ - coef: 0.088252
+ - p < 0.05 so statistically significant relationship with pass fail
+ - intercept: -5.73
+
 
 ```{r}
 attendance_model <- glm(Pass_Fail ~ Attendance, 
-                   data = students, family = binomial)
+                   data = students)
 ```
 
 
 ```{r}
 summary(attendance_model)
 ```
+## Manually built Attendance model
+ - coef: 0.0260984
+ - p < 0.05 so statistically significant relationship with pass fail
+ - intercept: -0.5484524
+ - Null deviance: 718.89
+ - Residual deviance: 548.03
 
 ```{r}
 students$predictions <- predict(attendance_model, type = "response")
 
-students$Pass_Fail <- factor(students$Pass_Fail, levels = c("Fail", "Pass"))
-students$predicted_class <- ifelse(students$predictions > 0.6, "Pass", "Fail") # best one thus far
-students$predicted_class <- factor(students$predicted_class, levels = c("Fail", "Pass"))
-confusionMatrix(students$predicted_class, students$Pass_Fail, positive = "Pass")
+# Create class predictions based on 0.5 threshold
+students$predicted_class <- ifelse(students$predictions > 0.7, 1, 0)
+
+# Convert both predicted and actual labels into factors with same levels
+students$predicted_class <- factor(students$predicted_class, levels = c(0, 1), labels = c("Fail", "Pass"))
+students$Pass_Fail <- factor(students$Pass_Fail, levels = c(0, 1), labels = c("Fail", "Pass"))
 ```
 
 ```{r}
-roc(students$Pass_Fail, 
+# Now evaluate with confusion matrix
+confusionMatrix(students$predicted_class, students$Pass_Fail, positive = "Pass")
+```
+## Analyzing results
+Sensitivity (Recall for pass): 0.5995
+ - This means that the model is able to correctly identify 59.95% of the students who passed.
+ - This is a low number, so we should try to improve the model.
+Specificity  (Recall for fail): 0.8130 
+ - This means that the model is able to correctly identify 81.3% of the students who failed.
+ - This is a good number, so we can keep this model.
+Pos Pred Value  : 0.8645
+Neg Pred Value : 0.5049
+Prevalence : 0.6656
+Detection Rate : 0.3991
+Detection Prevalence : 0.4616
+Balanced Accuracy : 0.7062
+
+
+
+```{r}
+roc(students$Pass_Fail,
+    main="ROC Curve for Attendance Model",
     predict(attendance_model, type = "response"), 
     plot = TRUE, 
     print.auc = TRUE, 
     col = "blue", 
     lwd = 2)
 ```
-*Attendance AUC* -> 0.798
-
-
-
-## Can we improve on attendance?
-
-# Feature engineering
-```{r}
-students$Engagement_Ratio <- (students$Participation_Score + students$Attendance + students$Study_Hours_per_Week) / 3
-```
-
-```{r}
-# BEST MODEL
-engagement_model <- glm(Pass_Fail ~ Engagement_Ratio,
-                   data = students, family = binomial)
-```
-
-
-```{r}
-summary(engagement_model) # engagement is most significant right now
-```
-
-
-```{r}
-students$predictions <- predict(engagement_model, type = "response")
-
-students$Pass_Fail <- factor(students$Pass_Fail, levels = c("Fail", "Pass"))
-students$predicted_class <- ifelse(students$predictions > 0.6, "Pass", "Fail") # best one thus far
-students$predicted_class <- factor(students$predicted_class, levels = c("Fail", "Pass"))
-confusionMatrix(students$predicted_class, students$Pass_Fail, positive = "Pass")
-```
-
-```{R}
-roc(students$Pass_Fail,
-    students$predictions,
-    plot = TRUE, 
-    print.auc = TRUE, 
-    col = "blue", 
-    lwd = 2)
-```
-
-Auc went down upon feature engineering. However, the recall went up
-
+## ROC curve for attendence model
+ - AUC = 0.798
+ - This means that the model is able to distinguish between pass and fail students 79.8% of the time.
+ 
+ 
+ 
+ 
+ 
