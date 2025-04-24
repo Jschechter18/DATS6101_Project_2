@@ -1,0 +1,360 @@
+---
+title: "Final_Code"
+author: "Josh Schechter"
+date: "2025-04-24"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(dplyr)
+library(readr)
+library(ggplot2)
+library(tidyr)
+library(caret)
+library(pROC)
+library(MASS)
+library(rpart)
+library(randomForest)
+```
+
+```{r}
+students <- read.csv("../data/Students_Grading_Dataset_Cleaned.csv")
+```
+
+
+
+```{r}
+colnames(students)
+```
+## Steps:
+1. Find features of interest of interest.
+2. Create individual regression models for those features.
+3. Determine which models are the best.
+4. Create a combined regression model, where we basically combine the features from the best models.
+5. Use this final regression model to answer smart questions.
+6. Report findings.
+
+```{r}
+cor_mat <- cor(students[, c("Total_Score", "Study_Hours_per_Week", 
+                         "Sleep_Hours_per_Night", 
+                         "Attendance", "Participation_Score",
+                         'Pass_Fail')])
+
+
+corrplot::corrplot(cor_mat,
+                   method="number",
+                   col="blue",
+                   type="lower",
+                   cl.pos='n',
+                   diag=FALSE)
+```
+
+
+## Correlation matrix:
+Only attendance seems to have a decent correlation with pass fail.
+
+# Finalize data cleaning before modeling:
+```{r}
+students$Total_Score <- as.numeric(students$Total_Score)
+students$Study_Hours_per_Week <- as.numeric(students$Study_Hours_per_Week)
+students$Sleep_Hours_per_Night <- as.numeric(students$Sleep_Hours_per_Night)
+students$Stress_Level <- as.numeric(students$Stress_Level)
+```
+
+## Target variables:
+1. Pass_Fail (logistic regression)
+2. Total_Score (linear regression?
+
+# Upsampling our imbalanced dataset
+```{r}
+students$Pass_Fail <- factor(students$Pass_Fail, levels = c(0, 1), labels = c("Fail", "Pass"))
+set.seed(123)  # for reproducibility
+students <- upSample(x = students[, setdiff(names(students), "Pass_Fail")],
+                               y = students$Pass_Fail,
+                               yname = "Pass_Fail")
+
+# Check class balance
+table(students$Pass_Fail)
+```
+```{r}
+students$Pass_Fail <- ifelse(students$Pass_Fail == "Fail", 0, 1)
+```
+
+
+# Linear regressions total grade
+```{r}
+full_lin_reg_model <- lm(Total_Score ~ Attendance + Sleep_Hours_per_Night + Study_Hours_per_Week + Stress_Level, data = students)
+summary(full_lin_reg_model)
+
+lin_reg_stepwise_model <- stepAIC(full_lin_reg_model, direction = "both", trace = FALSE)
+
+# View selected model summary
+summary(lin_reg_stepwise_model)
+```
+## Linear regression results
+ - A multiple linear regression was conducted to examine whether Attendance, Sleep Hours, Study Hours, and Stress Level predicted Total Score
+ - The model was not statistically significant (F(4, 3225) = 0.755, p = 0.554), with an R-squared of 0.0009, indicating that the predictors explained less than 0.1% of the variance in Total Score.
+ -None of the individual predictors were significant at the 0.05 level. These results suggest that these variables do not meaningfully contribute to predicting Total Score in this dataset.
+
+
+## Logistic regression
+```{r}
+full_logit_model <- glm(Pass_Fail ~ Attendance + Family_Income_Level + Extracurricular_Activities + Internet_Access_at_Home,
+                   data = students,
+                   family = binomial)
+
+# Stepwise selection
+stepwise_logit_model <- stepAIC(full_logit_model, direction = "both")
+
+summary(stepwise_logit_model)
+```
+
+## Feature selection analysis
+Feature selection tells us that attendance is the best model predictor. Note, we should still check to see if there is a difference between the different groups of students and their total scores.
+
+Lowest AIC model is attendance, and family_income_level.
+
+stepwise gives us the model:
+*Intercept*
+ - coef: -6.906600
+ - std. error: 0.235062
+ - z value: -29.382
+ - p < 0.05 so statistically significant relationship with pass fail
+ 
+*Attendance*
+ - coef: 0.094121
+ - std. error: 0.003025
+ - z value: 31.116
+ - statistically significant
+ 
+*Low fam income*
+ - coef: 0.179478
+ - std. error: 0.097863
+ - z value: 1.834
+ - p-val = 0.0667, which is not statistically significant, but feature selection keeps it in the model
+
+*Med fam income*
+ - coef: 0.013696
+ - std. error: 0.097217
+ - z value: 0.141
+ - not statistically significant
+
+*High fam income*
+ - used as baseline for comparison
+
+
+```{r}
+final_logit_model <- glm(Pass_Fail ~ Attendance + Family_Income_Level, 
+                   data = students)
+```
+
+```{r}
+summary(final_logit_model)
+```
+## Final Model
+*Intercept*
+ - coef:  -0.8791872
+ - statistically significant
+ - std. error: 0.0362967
+ - t value: -24.222
+
+*Attendance*
+ - coef: 0.0187739
+ - statistically significant
+ - std. error: 0.0005075
+ - t value: 41.218
+ 
+*Low Family Income*
+ - coef: 0.0296613
+ - p-value =0.0911, so not statistically significant, but close
+ - std. error: 0.0175511
+ - t value: 1.690
+ 
+*Med Family Income*
+ - coef: 0.0015142
+ - not statistically significant
+ - std. error: 0.017477
+ - t value: 0.87
+
+*Deviance*
+ - Null deviance: 1075.00
+ - Residual deviance: 770.25
+ - AIC: 4818.4
+
+
+```{r}
+students$predictions <- predict(final_logit_model, type = "response")
+```
+
+```{r}
+# Prepare ground truth and predicted probabilities
+true_labels <- factor(students$Pass_Fail, levels = c("Fail", "Pass"))
+probs <- students$predictions
+
+# Initialize vector to store results
+thresholds <- seq(0.1, 0.9, by = 0.01)
+results <- data.frame(
+  threshold = thresholds,
+  Accuracy = NA,
+  Sensitivity = NA,
+  Specificity = NA,
+  Precision = NA,
+  F1 = NA
+)
+
+# Loop through thresholds
+for (i in seq_along(thresholds)) {
+  t <- thresholds[i]
+  
+  preds <- ifelse(probs > t, "Pass", "Fail")
+  preds <- factor(preds, levels = c("Fail", "Pass"))
+  
+  cm <- confusionMatrix(preds, true_labels, positive = "Pass")
+  
+  # Extract metrics
+  acc <- cm$overall["Accuracy"]
+  sens <- cm$byClass["Sensitivity"]
+  spec <- cm$byClass["Specificity"]
+  prec <- cm$byClass["Precision"]
+  f1 <- cm$byClass["F1"]
+  
+  results[i, 2:6] <- c(acc, sens, spec, prec, f1)
+}
+
+# View top thresholds by F1 Score
+results[order(-results$F1), ][1:5, ]
+```
+
+```{r}
+students$predicted_class <- ifelse(students$predictions > 0.28, 1, 0)
+students$predicted_class <- factor(students$predicted_class, levels = c(0, 1), labels = c("Fail", "Pass"))
+```
+
+
+```{r}
+students$Pass_Fail <- as.numeric(as.character(students$Pass_Fail))
+students$Pass_Fail <- factor(students$Pass_Fail, levels = c(0, 1), labels = c("Fail", "Pass"))
+```
+
+```{r}
+table(students$predicted_class, useNA = "always")
+table(students$Pass_Fail, useNA = "always")
+```
+
+
+```{r}
+# Now evaluate with confusion matrix
+students$Pass_Fail <- factor(students$Pass_Fail, levels = c("Fail", "Pass"))
+confusionMatrix(students$predicted_class, students$Pass_Fail, positive = "Pass")
+```
+## Analyzing results
+Sensitivity (Recall for pass): 0.9056
+ - This means that the model is able to correctly identify 90.56% of the students who passed.
+ - This is a low number, so we should try to improve the model.
+Specificity  (Recall for fail): 0.4400
+ - This means that the model is able to correctly identify 44.00% of the students who failed.
+ - This is a good number, so we can keep this model.
+Pos Pred Value  : 0.6179
+Neg Pred Value : 0.8233
+Prevalence : 0.5000
+Detection Rate : 0.4528
+Detection Prevalence : 0.7328
+Balanced Accuracy : 0.6728
+
+```{r}
+table(students$predicted_class, useNA = "always")
+table(students$Pass_Fail, useNA = "always")
+```
+
+
+```{r}
+roc(students$Pass_Fail,
+    main="ROC Curve for Attendance Model",
+    predict(final_logit_model, type = "response"), 
+    plot = TRUE, 
+    print.auc = TRUE, 
+    col = "blue", 
+    lwd = 2)
+```
+## ROC curve for attendence model
+ - AUC = 0.804
+ - This means that the model is able to distinguish between pass and fail students 80.4% of the time.
+
+
+## Random Forest Modeling
+# Growing tree
+```{r}
+# Building random forest model
+set.seed(1)
+rf_model <- randomForest(Pass_Fail ~ Attendance + Family_Income_Level + Extracurricular_Activities + Internet_Access_at_Home,
+                         data = students,
+                         ntree = 500,
+                         mtry = 2,
+                         importance = TRUE)
+
+print(rf_model)
+```
+
+```{r}
+rf_predictions <- predict(rf_model, students, type = "class")
+
+confusionMatrix(rf_predictions, students$Pass_Fail, positive = 'Pass')
+```
+
+```{r}
+rf_probs <- predict(rf_model, students, type = "prob")[,2]
+
+rf_roc <- roc(students$Pass_Fail, rf_probs)
+plot(rf_roc,
+     main="ROC Curve - Random Forest",
+     print.auc = TRUE, 
+     col = "blue", 
+     lwd = 2)
+auc(rf_roc)
+```
+
+
+**Random Forest**
+AUC(ROC): 0.896
+Sensitivity (Pass Recall): 0.5335
+Specificity (Fail Recall): 0.9842 (lower than logistic regression)
+Pos Pred Value: 0.9712
+Neg Pred Value: 0.6784
+Prevalence: 0.5000
+Detection Rate: 0.2667
+Detection Prevalence: 0.2744
+Balanced Accuracy : 0.7588
+
+
+## Comparing Logistic Regression to Random Forest:
+**Logistic Regression**
+ - Detects pass students 90.56% of the time
+ - Detects fail students 44.00% of the time
+ - AUC(ROC): 0.804
+**Random Forest**
+ - Detects pass students 53.35% of the time
+ - Detects fail students 98.42% of the time
+ - AUC(ROC): 0.896
+
+*Analysis*
+ - The random forest model is excellent at detecting students likely to fail, but poor at detecting passing students.
+ - The logistic regression model is excellent at detecting students likely to pass, but poor at detecting failing students.
+ 
+ - Which model to use is dependent on which the professor is more interested in catching. If the professor wants to predict which students are likely to fail, use the random forest. If the professor wants to predict which students will pass, use the logistic regression model.
+
+
+
+
+
+
+
+
+

@@ -38,3 +38,89 @@ summary(tree_model) # detailed summary of splits
 plot(tree_model, uniform=TRUE, main="Classification Tree for Attendance")
 text(tree_model, use.n=TRUE, all=TRUE, cex=.8)
 ```
+## Random Forest Model
+```{r}
+library(randomForest)
+
+students$Pass_Fail <- as.factor(students$Pass_Fail)
+
+# Building random forest model
+set.seed(1)
+rf_model <- randomForest(Pass_Fail ~ Attendance + Family_Income_Level + Extracurricular_Activities + Internet_Access_at_Home,
+                         data = students,
+                         ntree = 500,
+                         mtry = 2,
+                         importance = TRUE)
+
+print(rf_model)
+```
+## Prediction and confusion matrix
+```{r}
+rf_predictions <- predict(rf_model, students, type = "class")
+
+confusionMatrix(rf_predictions, students$Pass_Fail, positive = '0')
+```
+## ROC Curve and AUC
+```{r}
+library(pROC)
+
+rf_probs <- predict(rf_model, students, type = "prob")[,2]
+
+rf_roc <- roc(students$Pass_Fail, rf_probs)
+plot(rf_roc, main="ROC Curve - Random Forest", col="darkgreen", lwd=2)
+auc(rf_roc)
+```
+
+## Random Forest (Attendance Only)
+```{r}
+set.seed(1)
+rf_attendance_only <- randomForest(Pass_Fail ~ Attendance,
+                                   data = students,
+                                   ntree = 500,
+                                   mtry = 1,
+                                   importance = TRUE)
+print(rf_attendance_only)
+
+```
+
+```{r}
+rf_attendance_preds <- predict(rf_attendance_only, students, type = "class")
+confusionMatrix(rf_attendance_preds, students$Pass_Fail, positive = "Pass")
+
+rf_attendance_probs <- predict(rf_attendance_only, students, type = "prob")[,2]
+roc_attendance <- roc(students$Pass_Fail, rf_attendance_probs)
+plot(roc_attendance, main = "ROC Curve - RF (Attendance Only)", col = "purple", lwd = 2)
+auc(roc_attendance)
+```
+
+MODEL COMPARISON: Logistic Regression vs Random Forest
+
+**Logistic Regression**(Attendance Only)
+AUC(ROC): 0.798
+Sensitivity (Pass Recall):59.95%
+Specificity (Fail Recall): 81.3%
+Balanced Accuracy: 70.62%
+Interpretability: Very high (single coefficient: Attendance)
+
+**Random Forest**(Multiple Features)
+AUC(ROC): ~0.8772 
+Sensitivity (Pass Recall): 92.93%
+Specificity (Fail Recall): 44.44% (lower than logistic regression)
+Balanced Accuracy : 68.69%
+Accuracy : 76.72%
+
+**Random Forest** (Attendance Only)
+AUC (ROC): High (visually close to full model, likely ~0.85–0.88)
+OOB Error Rate: 32.29%
+Sensitivity (Pass Recall): 75.1%
+Specificity (Fail Recall): 53.1%
+Balanced Accuracy: ~64.1%
+Top Feature: Attendance (only feature used)
+
+**CONCLUSION**
+-Logistic Regression gives balanced performance and is easier to interpret, especially useful if decision-makers want clear, actionable thresholds.
+-Random Forest is more powerful at detecting students likely to pass, but it sacrifices specificity — it struggles more with correctly identifying who might fail.
+-Random Forest (Attendance Only) uses just one feature — attendance — and still does a good job. It's simpler, faster, and shows that attendance by itself is a strong predictor of student success.
+
+
+
