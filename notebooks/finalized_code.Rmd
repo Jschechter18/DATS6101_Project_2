@@ -29,12 +29,11 @@ library(randomForest)
 students <- read.csv("../data/Students_Grading_Dataset_Cleaned.csv")
 ```
 
-
-
+## EDA
 ```{r}
 colnames(students)
 ```
-## Steps:
+# Steps:
 1. Find features of interest of interest.
 2. Create individual regression models for those features.
 3. Determine which models are the best.
@@ -58,8 +57,47 @@ corrplot::corrplot(cor_mat,
 ```
 
 
-## Correlation matrix:
+# Correlation matrix:
 Only attendance seems to have a decent correlation with pass fail.
+
+
+```{r}
+str(students)
+summary(students)
+```
+
+```{r}
+table(students$Pass_Fail)
+barplot(table(students$Pass_Fail), col=c('orange','blue'), main = "Distribution of Pass/Fail")
+```
+
+
+```{r}
+ggplot(students, aes(x = Total_Score)) + 
+  geom_histogram(binwidth = 2, fill = "skyblue", color = "black") +
+  labs(title = "Distribution of Total Score")
+
+ggplot(students, aes(x = Study_Hours_per_Week)) + 
+  geom_histogram(fill = "purple", color = "white") +
+  labs(title = "Study Hours per Week Distribution")
+
+ggplot(students, aes(x = Attendance)) + 
+  geom_histogram(fill = "green", color = "white") +
+  labs(title = "Attendance Distribution")
+```
+
+```{r}
+students %>%
+  count(Family_Income_Level, Pass_Fail) %>%
+  group_by(Family_Income_Level) %>%
+  mutate(Proportion = n / sum(n)) %>%
+  ggplot(aes(x = Family_Income_Level, y = Proportion, fill = Pass_Fail)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Normalized Pass_Fail Distribution by Family Income Level",
+       x = "Family Income Level", y = "Proportion") +
+  ylim(0,0.5)
+```
+
 
 # Finalize data cleaning before modeling:
 ```{r}
@@ -194,44 +232,6 @@ summary(final_logit_model)
 students$predictions <- predict(final_logit_model, type = "response")
 ```
 
-```{r}
-# Prepare ground truth and predicted probabilities
-true_labels <- factor(students$Pass_Fail, levels = c("Fail", "Pass"))
-probs <- students$predictions
-
-# Initialize vector to store results
-thresholds <- seq(0.1, 0.9, by = 0.01)
-results <- data.frame(
-  threshold = thresholds,
-  Accuracy = NA,
-  Sensitivity = NA,
-  Specificity = NA,
-  Precision = NA,
-  F1 = NA
-)
-
-# Loop through thresholds
-for (i in seq_along(thresholds)) {
-  t <- thresholds[i]
-  
-  preds <- ifelse(probs > t, "Pass", "Fail")
-  preds <- factor(preds, levels = c("Fail", "Pass"))
-  
-  cm <- confusionMatrix(preds, true_labels, positive = "Pass")
-  
-  # Extract metrics
-  acc <- cm$overall["Accuracy"]
-  sens <- cm$byClass["Sensitivity"]
-  spec <- cm$byClass["Specificity"]
-  prec <- cm$byClass["Precision"]
-  f1 <- cm$byClass["F1"]
-  
-  results[i, 2:6] <- c(acc, sens, spec, prec, f1)
-}
-
-# View top thresholds by F1 Score
-results[order(-results$F1), ][1:5, ]
-```
 
 ```{r}
 students$predicted_class <- ifelse(students$predictions > 0.28, 1, 0)
