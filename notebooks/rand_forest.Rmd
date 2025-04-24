@@ -58,7 +58,7 @@ print(rf_model)
 ```{r}
 rf_predictions <- predict(rf_model, students, type = "class")
 
-confusionMatrix(rf_predictions, students$Pass_Fail, positive = "Pass")
+confusionMatrix(rf_predictions, students$Pass_Fail, positive = '0')
 ```
 ## ROC Curve and AUC
 ```{r}
@@ -82,6 +82,7 @@ rf_attendance_only <- randomForest(Pass_Fail ~ Attendance,
 print(rf_attendance_only)
 
 ```
+
 ```{r}
 rf_attendance_preds <- predict(rf_attendance_only, students, type = "class")
 confusionMatrix(rf_attendance_preds, students$Pass_Fail, positive = "Pass")
@@ -90,7 +91,6 @@ rf_attendance_probs <- predict(rf_attendance_only, students, type = "prob")[,2]
 roc_attendance <- roc(students$Pass_Fail, rf_attendance_probs)
 plot(roc_attendance, main = "ROC Curve - RF (Attendance Only)", col = "purple", lwd = 2)
 auc(roc_attendance)
-
 ```
 
 MODEL COMPARISON: Logistic Regression vs Random Forest
