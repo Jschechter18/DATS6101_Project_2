@@ -334,8 +334,10 @@ varImpPlot(rf_model,
 
 **Variable importance plot** 
 - Helps us to confirm that attendance is the most important variable in predicting pass/fail
-- Supporting our initial assumption (the results of the logistic regression model).
-
+- Supporting our initial assumption (the results of the logistic regression model)
+- This plot visualizes how much each variable contributes to the predictive accuracy of the Random Forest model
+- The higher the mean decrease in accuracy or Gini index, the more important the variable
+- In this case, the large contribution of attendance indicates that it plays a central role in student performance
 
 **Random Forest**
 AUC(ROC): 0.896
