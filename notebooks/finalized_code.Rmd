@@ -321,6 +321,21 @@ plot(rf_roc,
 auc(rf_roc)
 ```
 
+# Variable Importance plot
+```{r}
+
+importance(rf_model)
+
+varImpPlot(rf_model, 
+           main = "Variable Importance - Random Forest",
+           col = "blue", 
+           lwd = 2)
+```
+
+**Variable importance plot** 
+- Helps us to confirm that attendance is the most important variable in predicting pass/fail
+- Supporting our initial assumption (the results of the logistic regression model).
+
 
 **Random Forest**
 AUC(ROC): 0.896
