@@ -145,7 +145,7 @@ summary(lin_reg_stepwise_model)
 
 ## Logistic regression
 ```{r}
-full_logit_model <- glm(Pass_Fail ~ Attendance + Family_Income_Level + Extracurricular_Activities + Internet_Access_at_Home,
+full_logit_model <- glm(Pass_Fail ~ Attendance + Family_Income_Level + Extracurricular_Activities + Internet_Access_at_Home + Sleep_Hours_per_Night + Study_Hours_per_Week + Stress_Level,
                    data = students,
                    family = binomial)
 
@@ -255,6 +255,21 @@ table(students$Pass_Fail, useNA = "always")
 students$Pass_Fail <- factor(students$Pass_Fail, levels = c("Fail", "Pass"))
 confusionMatrix(students$predicted_class, students$Pass_Fail, positive = "Pass")
 ```
+```{r}
+conf_mat <- confusionMatrix(students$predicted_class, students$Pass_Fail, positive = "Pass")
+conf_mat_df <- as.data.frame(conf_mat$table)
+ggplot(data = conf_mat_df, aes(x = Reference, y = Prediction, fill = Freq)) +
+  geom_tile(color = "black") +
+  geom_text(aes(label = Freq), size = 6) +
+  scale_fill_gradient(low = "white", high = "steelblue") +
+  scale_y_discrete(limits = rev(levels(conf_mat_df$Prediction))) +
+  theme_minimal() +
+  labs(
+    title = "Confusion Matrix",
+    x = "Actual (Reference)",
+    y = "Predicted"
+  )
+```
 ## Analyzing results
 Sensitivity (Recall for pass): 0.9056
  - This means that the model is able to correctly identify 90.56% of the students who passed.
@@ -307,6 +322,18 @@ print(rf_model)
 rf_predictions <- predict(rf_model, students, type = "class")
 
 confusionMatrix(rf_predictions, students$Pass_Fail, positive = 'Pass')
+```
+
+```{r}
+tree_conf_mat <- confusionMatrix(rf_predictions, students$Pass_Fail, positive = 'Pass')
+tree_conf_mat_df <- as.data.frame(tree_conf_mat$table)
+ggplot(data = tree_conf_mat_df, aes(x = Reference, y = Prediction, fill = Freq)) +
+  geom_tile(color = "black") +
+  geom_text(aes(label = Freq), size = 6) +
+  scale_fill_gradient(low = "white", high = "steelblue") +
+  scale_y_discrete(limits = rev(levels(conf_mat_df$Prediction))) +
+  theme_minimal() +
+  labs(title = "Confusion Matrix", x = "Actual", y = "Predicted")
 ```
 
 ```{r}
