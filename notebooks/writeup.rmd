@@ -15,17 +15,12 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## Introduction -> Josh
 ## Data Preprocessing -> Lincoln
-## Exploratory Data Analysis(EDA) -> Lincoln
+## Exploratory Data Analysis (EDA) -> Lincoln
 ## Linear Regression -> Josh
 ## Logistic regression -> Josh
 ## Random Forest Model -> Naiyani
 ## Comparing Random Forest and logistic Regression Models -> Naiyani
 ## Conclusion -> Naiyani
-
-
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
 
 ```{r}
 library(dplyr)
@@ -39,21 +34,25 @@ library(rpart)
 library(randomForest)
 ```
 
+# Introduction
+When constructing and teaching a college level course over a long period of time, a professor should generally be able to identify tendencies and characteristics of students who are likely to perform well in the course. If the professor can identify these tendencies, it can help to ensure that the course is being taught in a way that is accessible and fair to all students, provide proper guidance for students to know what will be likely to make them successful, and identify what improvements could be made in the course based on previous data. It is our goal to identify the characteristics, tendencies, and predictors of students who are unlikely to success in the course.
+
+Our research questions are as follows:
+1. What features are the best predictors of student success in a college level course?
+2. Can we create a model that accurately predicts passing/failing?
+
+
+
 ```{r}
 students <- read.csv("../data/Students_Grading_Dataset_Cleaned.csv")
 ```
 
-## EDA
+# Data Preprocessing ***LINCOLN***
+
+# Exploratory Data Analysis (EDA) ***LINCOLN***
 ```{r}
 colnames(students)
 ```
-# Steps:
-1. Find features of interest of interest.
-2. Create individual regression models for those features.
-3. Determine which models are the best.
-4. Create a combined regression model, where we basically combine the features from the best models.
-5. Use this final regression model to answer smart questions.
-6. Report findings.
 
 ```{r}
 cor_mat <- cor(students[, c("Total_Score", "Study_Hours_per_Week", 
@@ -69,10 +68,6 @@ corrplot::corrplot(cor_mat,
                    cl.pos='n',
                    diag=FALSE)
 ```
-
-
-# Correlation matrix:
-Only attendance seems to have a decent correlation with pass fail.
 
 
 ```{r}
@@ -141,9 +136,22 @@ students$Pass_Fail <- ifelse(students$Pass_Fail == "Fail", 0, 1)
 ```
 
 
+# Linear Regression ***JOSH***
+
+After our findings in EDA, we wanted to see if we could create a linear model for infering total score based on predictors. Our initial thought was to use the following predictors:
+1. Attendance
+2. Sleep Hours per Night
+3. Study Hours per Week
+4. Stress Level
+5. Family Income Level
+6. Extracurricular Activities
+7. Internet Access at Home
+From there, we would run a stepwise regression to see if we could find a model with less predictors that still yields similar results.
+
+
 # Linear regressions total grade
 ```{r}
-full_lin_reg_model <- lm(Total_Score ~ Attendance + Sleep_Hours_per_Night + Study_Hours_per_Week + Stress_Level, data = students)
+full_lin_reg_model <- lm(Total_Score ~ Attendance + Sleep_Hours_per_Night + Study_Hours_per_Week + Stress_Level + Family_Income_Level + Extracurricular_Activities + Internet_Access_at_Home, data = students)
 summary(full_lin_reg_model)
 
 lin_reg_stepwise_model <- stepAIC(full_lin_reg_model, direction = "both", trace = FALSE)
@@ -151,11 +159,23 @@ lin_reg_stepwise_model <- stepAIC(full_lin_reg_model, direction = "both", trace 
 # View selected model summary
 summary(lin_reg_stepwise_model)
 ```
-## Linear regression results
- - A multiple linear regression was conducted to examine whether Attendance, Sleep Hours, Study Hours, and Stress Level predicted Total Score
- - The model was not statistically significant (F(4, 3225) = 0.755, p = 0.554), with an R-squared of 0.0009, indicating that the predictors explained less than 0.1% of the variance in Total Score.
- -None of the individual predictors were significant at the 0.05 level. These results suggest that these variables do not meaningfully contribute to predicting Total Score in this dataset.
+Post stepwise regression, we were left with four predictors:
+1. Study Hours per Week
+2. Stress Level
+3. Family Income Level-Low
+4. Family Income Level-Medium
 
+With an alpha= 0.05, only family income level-low had a statistically significant p-value. This is an indication that family income level does in fact have some sort of a significant relationship with inferring total score in this linear regression model. The other predictors were not statistically significant, however they were recommended by the stepwise algorithm, which indicates that they did impact the model.
+
+Our linear regression formula is as follows:
+y = 74.38158 + -0.04728 * Study_Hours_per_Week + 0.11350 * Stress_Level + 1.59011 * Family_Income_LevelLow + 0.68504 * Family_Income_LevelMedium
+
+Notably, our model is statistically very weak, with a multiple r-squared value of 0.00284, indicating that our model only explains 0.284% of the variance in total score. Given this is a very low percentage, we can conclude that this model alone is not a good predictor of total score.
+
+
+# Logistic Regression ***JOSH***
+
+The next model we set out to build was a logistic regression model to predict pass/fail based on the same indicators as our linear regression model. Once again, we ran a stepwise model comparison to determine which model would yield the best results with the least amount of predictors.
 
 ## Logistic regression
 ```{r}
@@ -168,85 +188,27 @@ stepwise_logit_model <- stepAIC(full_logit_model, direction = "both")
 
 summary(stepwise_logit_model)
 ```
+Post stepwise regression, we were left with just tree predictors:
+1. Attendance
+2. Family Income Level-Low
+3. Family Income Level-Medium
 
-## Feature selection analysis
-Feature selection tells us that attendance is the best model predictor. Note, we should still check to see if there is a difference between the different groups of students and their total scores.
-
-Lowest AIC model is attendance, and family_income_level.
-
-stepwise gives us the model:
-*Intercept*
- - coef: -6.906600
- - std. error: 0.235062
- - z value: -29.382
- - p < 0.05 so statistically significant relationship with pass fail
- 
-*Attendance*
- - coef: 0.094121
- - std. error: 0.003025
- - z value: 31.116
- - statistically significant
- 
-*Low fam income*
- - coef: 0.179478
- - std. error: 0.097863
- - z value: 1.834
- - p-val = 0.0667, which is not statistically significant, but feature selection keeps it in the model
-
-*Med fam income*
- - coef: 0.013696
- - std. error: 0.097217
- - z value: 0.141
- - not statistically significant
-
-*High fam income*
- - used as baseline for comparison
+With an alpha=0.05-of the selected predictors-only attendance was statistically significant given its p-value of 0.00. Notably, family income level-low was very close to the alpha value, although just missed the threshold. This would indicate that family income level-low does have some sort of a relevant relationship with pass/fail. Family income level-median was not remotely close to statistical significance. At this point, we will make our final logistic regression model.S
 
 
 ```{r}
 final_logit_model <- glm(Pass_Fail ~ Attendance + Family_Income_Level, 
                    data = students)
-```
 
-```{r}
 summary(final_logit_model)
 ```
-## Final Model
-*Intercept*
- - coef:  -0.8791872
- - statistically significant
- - std. error: 0.0362967
- - t value: -24.222
-
-*Attendance*
- - coef: 0.0187739
- - statistically significant
- - std. error: 0.0005075
- - t value: 41.218
- 
-*Low Family Income*
- - coef: 0.0296613
- - p-value =0.0911, so not statistically significant, but close
- - std. error: 0.0175511
- - t value: 1.690
- 
-*Med Family Income*
- - coef: 0.0015142
- - not statistically significant
- - std. error: 0.017477
- - t value: 0.87
-
-*Deviance*
- - Null deviance: 1075.00
- - Residual deviance: 770.25
- - AIC: 4818.4
 
 
 ```{r}
 students$predictions <- predict(final_logit_model, type = "response")
 ```
 
-
+Now that our model is built, and we have made our probabilities for each datapoint via the model, we will set the threshold to 0.5, as the dataset has been upsampled already.
 ```{r}
 students$predicted_class <- ifelse(students$predictions > 0.5, 1, 0)
 students$predicted_class <- factor(students$predicted_class, levels = c(0, 1), labels = c("Fail", "Pass"))
@@ -270,6 +232,12 @@ students$Pass_Fail <- factor(students$Pass_Fail, levels = c("Fail", "Pass"))
 confusionMatrix(students$predicted_class, students$Pass_Fail, positive = "Pass")
 ```
 
+To analyze the results, we built a confusion matrix. The main metrics that we will be looking at are:
+1. Sensitivity (Recall for pass), for all actual passing students, what proportion was predicted as passing?
+2. Specificity (Recall for fail), for all actual failing students, what proportion was predicted as failing?
+
+For sensitivity, the score was 0.6935. It can be said that 69.35% of all actual passing students were predicted to pass the course. For specificity, the score was 0.7144. It can be said that 71.44% of all actual failing students were predicted to fail the course. For our use case, we can make the claim that this is a good model. As not only is it approximately good at predicting both, but it is able to identify students who are likely to fail the course at a fairly high rate.
+
 
 ```{r}
 conf_mat <- confusionMatrix(students$predicted_class, students$Pass_Fail, positive = "Pass")
@@ -286,19 +254,6 @@ ggplot(data = conf_mat_df, aes(x = Reference, y = Prediction, fill = Freq)) +
     y = "Predicted"
   )
 ```
-## Analyzing results
-Sensitivity (Recall for pass): 0.9056
- - This means that the model is able to correctly identify 90.56% of the students who passed.
- - This is a low number, so we should try to improve the model.
-Specificity  (Recall for fail): 0.4400
- - This means that the model is able to correctly identify 44.00% of the students who failed.
- - This is a good number, so we can keep this model.
-Pos Pred Value  : 0.6179
-Neg Pred Value : 0.8233
-Prevalence : 0.5000
-Detection Rate : 0.4528
-Detection Prevalence : 0.7328
-Balanced Accuracy : 0.6728
 
 ```{r}
 table(students$predicted_class, useNA = "always")
@@ -315,9 +270,8 @@ roc(students$Pass_Fail,
     col = "blue", 
     lwd = 2)
 ```
-## ROC curve for attendence model
- - AUC = 0.804
- - This means that the model is able to distinguish between pass and fail students 80.4% of the time.
+
+Finally, we can analyze the ROC curve to visually see the tradeoff between Sensitivity and Specificity. The AUC represents the area under the curve, where a higher number will indicate that the model is better than random guessing. An AUC score of 0.8 is acceptable. In our model, the area under the curve (AUC) is 0.804, which indicates that the model is able to distinguish between passing and failing students with a good level of accuracy. Therefore, it can be said that this logistic regression model is fairly good for predicting pass/fail.
 
 
 ## Random Forest Modeling
