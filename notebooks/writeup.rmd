@@ -13,19 +13,15 @@ knitr::opts_chunk$set(echo = TRUE)
 ```
 
 
-## Introduction
-## Data Preprocessing
-## Exploratory Data Analysis(EDA)
-## Linear Regression
-## Logistic regression
-## Random Forest Model
-## Comparing Random Forest and logistic Regression Models
-## Conclusion
+## Introduction -> Josh
+## Data Preprocessing -> Lincoln
+## Exploratory Data Analysis(EDA) -> Lincoln
+## Linear Regression -> Josh
+## Logistic regression -> Josh
+## Random Forest Model -> Naiyani
+## Comparing Random Forest and logistic Regression Models -> Naiyani
+## Conclusion -> Naiyani
 
-
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
