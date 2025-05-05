@@ -407,6 +407,20 @@ Ultimately, the choice of model depends on the specific goals of the professor o
  
  - Which model to use is dependent on which the professor is more interested in catching. If the professor wants to predict which students are likely to fail, use the random forest. If the professor wants to predict which students will pass, use the logistic regression model.
 
+**Conclusion**
+
+Attendance is clearly the best and strongest predictor of student success.
+- As attendance increases, so does the probability of passing.
+- This is something professors should actively communicate to students — class attendance matters.
+
+Interestingly, while family income level wasn't statistically significant by p-value, feature selection methods suggested it still has some relationship with pass/fail outcomes.
+-This could point to potential bias or systemic disadvantages, and it might be worth investigating further.
+
+Overall, both models performed very well, but for different purposes:
+- Use Random Forest if the goal is to identify students at risk of failing.
+- Use Logistic Regression if the goal is to identify students likely to pass.
+
+And finally, one thing both models agree on: Attendance is critical.
 
 
 
