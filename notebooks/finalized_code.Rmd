@@ -319,7 +319,7 @@ rf_model <- randomForest(Pass_Fail ~ Attendance + Family_Income_Level + Extracur
 
 print(rf_model)
 ```
-Our main goal is to predict whether a student will pass or fail, using a Random Forest model, which is a powerful ensemble learning method.
+We chose to use a Random Forest model — it’s a powerful machine learning technique that works by combining several decision trees to make better predictions.
 We selected the following features based on their potential influence on academic performance:
 - Attendance – a key factor in student engagement and learning.
 - Family Income Level – which can affect access to resources and overall academic support.
