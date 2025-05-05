@@ -319,12 +319,33 @@ rf_model <- randomForest(Pass_Fail ~ Attendance + Family_Income_Level + Extracur
 
 print(rf_model)
 ```
+Our main goal is to predict whether a student will pass or fail, using a Random Forest model, which is a powerful ensemble learning method.
+We selected the following features based on their potential influence on academic performance:
+- Attendance – a key factor in student engagement and learning.
+- Family Income Level – which can affect access to resources and overall academic support.
+- Extracurricular Activities – which may impact time management and stress.
+- Internet Access at Home – especially important in a digital learning environment.
+These variables were used to train our model and understand patterns in student success and risk.
 
 ```{r}
 rf_predictions <- predict(rf_model, students, type = "class")
 
 confusionMatrix(rf_predictions, students$Pass_Fail, positive = 'Pass')
 ```
+
+**Analysing Results:**
+Sensitivity (Recall for pass): 0.5335 - moderate range
+ -True positive rate for students who passed, is 0.5335, meaning the model correctly identifies about 53% of students who pass.
+Specificity (Recall for fail): 0.9842 - high range
+ - This means that the model is able to correctly identify 98.42% of the students who failed.
+Overall Accuracy : 75.88%
+95% CI : 74.58% to 77.16% , giving us a solid statistical range.
+p value: 2.2e-16 (confirming that the model's accuracy is statistically significant)
+Pos Pred Value: 0.9712
+Neg Pred Value: 0.6784
+Prevalence: 0.5000
+Detection Rate: 0.2667
+Detection Prevalence: 0.2744
 
 ```{r}
 tree_conf_mat <- confusionMatrix(rf_predictions, students$Pass_Fail, positive = 'Pass')
@@ -338,6 +359,16 @@ ggplot(data = tree_conf_mat_df, aes(x = Reference, y = Prediction, fill = Freq))
   labs(title = "Confusion Matrix", x = "Actual", y = "Predicted")
 ```
 
+**Confusion Matrix**:
+- The model correctly predicted 2,116 students would fail, and they did — this is the true negatives.
+- It also correctly predicted 1,147 students would pass — the true positives.
+- However, it incorrectly predicted that 1,003 students would fail, when they actually passed — these are false negatives.
+- And only 34 students were wrongly predicted to pass when they actually failed — the false positives.
+
+What’s striking here is that the model is very cautious — it's far more likely to predict failure.
+-This leads to many false negatives, meaning a significant number of students who would pass are being predicted as likely to fail.
+-This supports what we saw earlier — the model has high specificity but moderate sensitivity
+
 ```{r}
 rf_probs <- predict(rf_model, students, type = "prob")[,2]
 
@@ -349,6 +380,11 @@ plot(rf_roc,
      lwd = 2)
 auc(rf_roc)
 ```
+
+**ROC Curve**:
+As a rule of thumb, an AUC greater than 0.8 is considered good, and anything above 0.85 is excellent.
+- AUC = 0.896 , excellent!
+- This means that the model is highly capable to distinguish between pass and fail students 89.6% of the time.
 
 # Variable Importance plot
 ```{r}
@@ -368,32 +404,20 @@ varImpPlot(rf_model,
 - The higher the mean decrease in accuracy or Gini index, the more important the variable
 - In this case, the large contribution of attendance indicates that it plays a central role in student performance
 
-**Random Forest**
-AUC(ROC): 0.896
-Sensitivity (Pass Recall): 0.5335
-Specificity (Fail Recall): 0.9842 (lower than logistic regression)
-Pos Pred Value: 0.9712
-Neg Pred Value: 0.6784
-Prevalence: 0.5000
-Detection Rate: 0.2667
-Detection Prevalence: 0.2744
-Balanced Accuracy : 0.7588
-
-
 ## Comparing Logistic Regression to Random Forest:
 **Logistic Regression**
  - Detects pass students 90.56% of the time
  - Detects fail students 44.00% of the time
  - AUC(ROC): 0.804
+
 **Random Forest**
  - Detects pass students 53.35% of the time
  - Detects fail students 98.42% of the time
  - AUC(ROC): 0.896
 
-*Analysis*
+**Analysis**
  - The random forest model is excellent at detecting students likely to fail, but poor at detecting passing students.
  - The logistic regression model is excellent at detecting students likely to pass, but poor at detecting failing students.
- 
  - Which model to use is dependent on which the professor is more interested in catching. If the professor wants to predict which students are likely to fail, use the random forest. If the professor wants to predict which students will pass, use the logistic regression model.
 
 
