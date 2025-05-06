@@ -68,6 +68,7 @@ corrplot::corrplot(cor_mat,
                    cl.pos='n',
                    diag=FALSE)
 ```
+The correlation matrix revealed that most variables, including Total Score, Study Hours per Week, Sleep Hours per Night, Attendance, Participation Score, and Pass/Fail, have very weak linear relationships, with correlations close to zero. The only moderately strong relationship was between Attendance and Pass/Fail (correlation of 0.49), suggesting that students who attended class more frequently were more likely to pass. This insight points to attendance as a meaningful predictor for student success.
 
 
 ```{r}
@@ -79,6 +80,8 @@ summary(students)
 table(students$Pass_Fail)
 barplot(table(students$Pass_Fail), col=c('orange','blue'), main = "Distribution of Pass/Fail")
 ```
+The bar plot of Pass/Fail distribution showed that the majority of students passed, as indicated by the taller blue bar representing pass status (1), compared to the shorter orange bar representing fail status (0). This indicates an imbalanced dataset, which is important to keep in mind because classification models may need balancing techniques like resampling or weighting to handle the imbalance.
+
 
 
 ```{r}
@@ -94,6 +97,11 @@ ggplot(students, aes(x = Attendance)) +
   geom_histogram(fill = "green", color = "white") +
   labs(title = "Attendance Distribution")
 ```
+The histogram of Total Score demonstrated that student scores are roughly uniformly distributed between 50 and 100, without strong skew toward the lower or upper ends. This suggests that the grading scale was fair, and the distribution of performance among students was even, without large groups clustering at failing or perfect scores.
+
+The histogram of Study Hours per Week showed that most students studied between 10 and 20 hours weekly, but there was an unusual spike at 30 hours. This spike may indicate a maximum reported value or a group of outliers who reported exceptionally high study times. This distribution is important for identifying potential outliers or deciding whether to cap or transform study hours before modeling.
+
+The attendance distribution histogram revealed that students’ attendance rates were fairly evenly spread, but with more students clustering around 80–90% attendance. This pattern reinforces the importance of attendance as a factor related to student outcomes, as seen earlier in the correlation analysis.
 
 ```{r}
 students %>%
@@ -106,6 +114,7 @@ students %>%
        x = "Family Income Level", y = "Proportion") +
   ylim(0,0.5)
 ```
+The normalized bar plot of Pass/Fail by Family Income Level showed that the proportion of students passing was quite similar across high, medium, and low-income groups. This suggests that family income did not have a major effect on academic success in this dataset, an important finding for considering fairness and potential biases when building predictive models.
 
 
 # Finalize data cleaning before modeling:
